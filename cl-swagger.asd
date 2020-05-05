@@ -7,7 +7,7 @@
   :author "Robert P. Goldman <rpgoldman@sift.net>"
   :license "BSD"
   :serial t
-  :depends-on ("drakma" "cl-json" "cl-ppcre" "cl-mustache")
+  :depends-on ("drakma" "cl-json" "cl-ppcre" "cl-mustache" "iterate")
   :components ((:file "package")
                (:file "templates")
                (:file "code-gen")))

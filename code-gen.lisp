@@ -75,24 +75,29 @@
   "call http-request with basic params and conteent and authorization"
   (multiple-value-bind (stream code)
       (drakma:http-request (format nil "~a~a" host url-path) :parameters params :content content :basic-authorization basic-authorization :accept accept :content-type content-type :want-stream t :method method)
-    (if (equal code 200)
+    (if (and (>= code 200) (< code 300))
         (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
                (cl-json:decode-json stream))
-        (format t "HTTP CODE : ~A ~%" code))))
+        (error "REST ~a call failed with code ~a" method code))))
+
+(defparameter +http-methods+
+  (list :|get| :|post| :|delete| :|patch|))
 
 
 (defun generate-client-with-json (json filepath
                                   &key (accept "application/json")
-                                    (accept-type "application/json"))
+                                    (accept-type "application/json")
+                                    (package-name "swagger-client"))
   "Generate lisp code for a swagger client with using a Swgger/OpenAPI spec in JSON,
 and write it to FILEPATH."
   (with-open-file (*standard-output* filepath :direction :output :if-exists :supersede)
     ;; (format t "(ql:quickload \"drakma\")~%(ql:quickload \"cl-json\")~%")
+    (format t "(in-package :~a)" (string-downcase package-name))
     (rest-call-function)
-    (loop for paths in (get-in '(:|paths|) json)
-          do (loop for path in (rest paths)
-                   do ;;(format t "~%~A==>~A~%" (first paths) (first path))
-                      (when (or (equal (first path) :|get|) (equal (first path) :|post|))
+    (loop :for paths :in (get-in '(:|paths|) json)
+          do (loop :for path :in (rest paths)
+                   :do ;;(format t "~%~A==>~A~%" (first paths) (first path))
+                      (when (member (first path) +http-methods+)
                         (multiple-value-bind (fnames options)
                             (parse-path-parameters (first paths))
                           (declare (ignorable fnames))
@@ -111,8 +116,21 @@ and write it to FILEPATH."
                                 (rest-call-template-v1 tmp)))))))
     (convert-json-template)))
 
+#+ignore
+(defun parse-responses (json-list)
+  (assert (member (first json-list) +http-methods+))
+  (let ((response-list (get-in '(:|responses|) (rest json-list))))
+    (iter (for (response-code . properties) in response-list)
+      (as response-numeral = (parse-integer (symbol-name response-code)))
+      (as success = (and (< response-numeral 300) (>= response-number 200)))
+      (let ((response)))
+      )
+    )
+  )
 
-(defun generate-client (url-or-pathname filepath &optional accept accept-type)
+
+(defun generate-client (url-or-pathname filepath
+                        &key (accept "application/json") (accept-type "application/json"))
   "Client code generation function.  Takes either a URL or a CL:PATHNAME as argument,
 and writes a swagger client to FILEPATH.
    The optional arguments are, at the moment, ignored."
