@@ -65,75 +65,6 @@
   "scheme + hostname + basepath"
   (concatenate 'string (get-schemes json) "://" (get-host json) (get-basepath json)))
 
-(define wrapper-call-templete-v2
-"
-;;
-;; summary : {{summary}}
-;; description : {{{description}}}
-;; * path : {{paths}}
-;;
-(defun {{first-name}}-{{path-name}} (&key param content basic-authorization)
-  (multiple-value-bind (stream code header)
-      (drakma:http-request (concatenate 'string \"{{baseurl}}/{{path-url}}?\" param) :basic-authorization basic-authorization :accept \"{{accept}}\" :content-type \"{{accept-type}}\" :content content :want-stream t :method {{method}})
-    (if (equal code 200) (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
-                                (cl-json:decode-json stream))
-        (format t \"failed - code : ~a\" code))))")
-
-
-(define rest-call-function
-  "
-(defun rest-call (host url-path
-                  &key params content basic-authorization
-                    (method :get)
-                    (accept \"application/json\")
-                    (content-type \"application/json\"))
-  \"call http-request with basic params and conteent and authorization\"
-  (multiple-value-bind (stream code)
-      (drakma:http-request (format nil \"~a~a\" host url-path) :parameters params :content content :basic-authorization basic-authorization :accept accept :content-type content-type :want-stream t :method method)
-    (if (equal code 200)
-        (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
-               (cl-json:decode-json stream))
-        (format t \"HTTP CODE : ~A ~%\" code))))")
-
-
-(define rest-call-templete-v1
-  "
-;;
-;; {{description}}
-;; * path-url : {{paths}}
-;;
-(defun {{first-name}}-{{path-name}} (&key params content basic-authorization)
-  (rest-call \"{{baseurl}}\" \"{{path-url}}\" :params params :content content
-                            :basic-authorization basic-authorization
-                            :method {{method}}
-                            :accept \"{{accept}}\"
-                            :content-type \"{{accept-type}}\"))")
-
-(define rest-call-templete-v2
-  "
-;;
-;; {{description}}
-;; * path-url : {{paths}}
-;;
-(defun {{first-name}}-{{path-name}} (path-url &key params content basic-authorization)
-  (rest-call \"{{baseurl}}\" path-url :params params :content content
-                                              :basic-authorization basic-authorization
-                                              :method {{method}}
-                                              :accept \"{{accept}}\"
-                                              :content-type \"{{accept-type}}\"))")
-
-
-(define convert-json-templete
-  "
-;;
-;; (convert-json #'function \"/path\" content-json)
-;;
-(defun convert-json (query-fun path body)
-  (multiple-value-bind (code stream head)
-      (funcall query-fun path body)
-    (if (equal code 200) (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
-                                (cl-json:decode-json stream))
-        (format t \"failed - code : ~a\" code))))")
 
 
 (defun rest-call (host url-path
@@ -150,10 +81,13 @@
         (format t "HTTP CODE : ~A ~%" code))))
 
 
-(defun generate-client-with-json (json filepath &optional accept accept-type)
-  "generater a lisp code with swagger-json"
+(defun generate-client-with-json (json filepath
+                                  &key (accept "application/json")
+                                    (accept-type "application/json"))
+  "Generate lisp code for a swagger client with using a Swgger/OpenAPI spec in JSON,
+and write it to FILEPATH."
   (with-open-file (*standard-output* filepath :direction :output :if-exists :supersede)
-    (format t "(ql:quickload \"drakma\")~%(ql:quickload \"cl-json\")~%")
+    ;; (format t "(ql:quickload \"drakma\")~%(ql:quickload \"cl-json\")~%")
     (rest-call-function)
     (loop for paths in (get-in '(:|paths|) json)
           do (loop for path in (rest paths)
@@ -161,6 +95,7 @@
                       (when (or (equal (first path) :|get|) (equal (first path) :|post|))
                         (multiple-value-bind (fnames options)
                             (parse-path-parameters (first paths))
+                          (declare (ignorable fnames))
                           ;;(format t " ~A ==> ~A ~%" fnames options)
                           (let ((tmp  `((:baseurl . ,(lambda () (make-urls json)))
                                         (:paths . ,(lambda () (car paths)))
@@ -169,17 +104,22 @@
                                         (:first-name . ,(lambda () (string-downcase (format nil "~A" (first path)))))
                                         (:method . ,(lambda() (format nil ":~A" (first path))))
                                         (:description . ,(lambda() (format nil "~A" (cl-ppcre:regex-replace-all "\\n" (get-in '(:|description|) (cdr path)) "\\n"))))
-                                        (:accept . ,"application/json")
-                                        (:accept-type . "application/json"))))
+                                        (:accept . ,accept)
+                                        (:accept-type . ,accept-type))))
                             (if options
-                                (rest-call-templete-v2 tmp)
-                                (rest-call-templete-v1 tmp)))))))
-    (convert-json-templete)))
+                                (rest-call-template-v2 tmp)
+                                (rest-call-template-v1 tmp)))))))
+    (convert-json-template)))
 
 
-(defun generate-client (url filepath &optional accept accept-type)
-  "exposing function for client code generater"
-  (if (typep url 'pathname) (generate-client-with-json (cl-json:decode-json-from-source url) filepath accept accept-type)
-      (generate-client-with-json (fetch-json url) filepath accept accept-type)))
+(defun generate-client (url-or-pathname filepath &optional accept accept-type)
+  "Client code generation function.  Takes either a URL or a CL:PATHNAME as argument,
+and writes a swagger client to FILEPATH.
+   The optional arguments are, at the moment, ignored."
+  (let ((json (if (typep url-or-pathname 'pathname)
+                  (cl-json:decode-json-from-source url-or-pathname)
+                  (fetch-json url-or-pathname))))
+    (generate-client-with-json json
+                               filepath :accept accept :accept-type accept-type)))
 
 ;;(with-output-to-string (st) (run-program "curl" '("-ks" "-u" "mapr:mapr" "https://172.16.28.138:8443/rest/alarm/list") :output st))
