@@ -10,9 +10,9 @@
 ;; description : {{{description}}}
 ;; * path : {{paths}}
 ;;
-(defun {{first-name}}-{{path-name}} (&key param content basic-authorization)
+(defun {{first-name}}-{{path-name}} (&key (base-url \"{{baseurl}}\") param content basic-authorization)
   (multiple-value-bind (stream code header)
-      (drakma:http-request (concatenate 'string \"{{baseurl}}/{{path-url}}?\" param) :basic-authorization basic-authorization :accept \"{{accept}}\" :content-type \"{{accept-type}}\" :content content :want-stream t :method {{method}})
+      (drakma:http-request (concatenate 'string base-url \"/\" \"{{path-url}}?\" param) :basic-authorization basic-authorization :accept \"{{accept}}\" :content-type \"{{accept-type}}\" :content content :want-stream t :method {{method}})
     (if  (and (< code 300) (>= code 200))
          (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
                 (cl-json:decode-json stream))
@@ -52,8 +52,8 @@
 ;; {{description}}
 ;; * path-url : {{paths}}
 ;;
-(defun {{first-name}}-{{path-name}} (&key params content basic-authorization)
-  (rest-call \"{{baseurl}}\" \"{{path-url}}\" :params params :content content
+(defun {{first-name}}-{{path-name}} (&key (base-url \"{{baseurl}}\") params content basic-authorization)
+  (rest-call base-url \"{{path-url}}\" :params params :content content
                             :basic-authorization basic-authorization
                             :method {{method}}
                             :accept \"{{accept}}\"
@@ -65,8 +65,8 @@
 ;; {{description}}
 ;; * path-url : {{paths}}
 ;;
-(defun {{first-name}}-{{path-name}} (path-url &key params content basic-authorization)
-  (rest-call \"{{baseurl}}\" path-url :params params :content content
+(defun {{first-name}}-{{path-name}} (path-url &key (base-url \"{{baseurl}}\") params content basic-authorization)
+  (rest-call base-url path-url :params params :content content
                                               :basic-authorization basic-authorization
                                               :method {{method}}
                                               :accept \"{{accept}}\"
