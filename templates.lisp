@@ -83,5 +83,6 @@
       (funcall query-fun path body)
     (if (and (>= code 200) (< code 300))
         (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
-               (cl-json:decode-json stream))
+               (let  ((cl-json:*json-identifier-name-to-lisp* (lambda (x) x)))
+                 (cl-json:decode-json stream)))
         (error \"CONVERT-JSON failed with code ~a\" code))))")

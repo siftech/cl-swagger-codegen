@@ -3,18 +3,14 @@
 ;;; drakma:*header-stream* for DEBUG
 (setf drakma:*header-stream* *standard-output*)
 
-;;; set cl-json:*json-identifier-name-to-lisp* AS identical name
-;;; ex ==> (setf cl-json:*json-identifier-name-to-lisp* (lambda (x) (string-upcase x)))
-(setf cl-json:*json-identifier-name-to-lisp* (lambda (x) x))
-
-
 (defun fetch-json (this-url)
   "gets JSON with this URL only when response-code is 200"
-  (multiple-value-bind (body response-code)
-      (http-request this-url :want-stream t)
-    (setf (flex:flexi-stream-external-format body) :utf-8)
-    (ecase response-code
-      (200 (cl-json:decode-json body)))))
+  (let ((cl-json:*json-identifier-name-to-lisp* (lambda (x) x)))
+    (multiple-value-bind (body response-code)
+        (http-request this-url :want-stream t)
+      (setf (flex:flexi-stream-external-format body) :utf-8)
+      (ecase response-code
+        (200 (cl-json:decode-json body))))))
 
 ;;; RE Pattern 
 (defparameter *parameter-pattern* "{([a-zA-Z\-]+)}")
@@ -92,7 +88,8 @@
 and write it to FILEPATH."
   (with-open-file (*standard-output* filepath :direction :output :if-exists :supersede)
     ;; (format t "(ql:quickload \"drakma\")~%(ql:quickload \"cl-json\")~%")
-    (format t "(in-package :~a)" (string-downcase package-name))
+    (format t "(in-package :~a)\n\n" (string-downcase package-name))
+    ;; emit the REST-CALL function into the output file
     (rest-call-function)
     (loop :for paths :in (get-in '(:|paths|) json)
           do (loop :for path :in (rest paths)
