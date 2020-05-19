@@ -34,10 +34,23 @@
                   &key params content basic-authorization
                     (method :get)
                     (accept \"application/json\")
-                    (content-type \"application/json\"))
-  \"call http-request with basic params and conteent and authorization\"
+                    (content-type \"application/json\")
+                    (debug nil))
+  \"Call http-request with basic params, content and authorization.\"
+  (flet ((make-request ()
+           (drakma:http-request (format nil \"~a~a\" host url-path)
+                           :parameters params
+                           :content content
+                           :basic-authorization basic-authorization
+                           :accept accept
+                           :content-type content-type
+                           :want-stream t
+                           :method method)))
   (multiple-value-bind (stream code)
-      (drakma:http-request (format nil \"~a~a\" host url-path) :parameters params :content content :basic-authorization basic-authorization :accept accept :content-type content-type :want-stream t :method method)
+      (if debug
+          (let ((drakma:*header-stream* *standard-output*))
+              (make-request))
+            (make-request))
     (if (and (< code 300) (>= code 200))
         (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
                (cl-json:decode-json stream))
@@ -52,12 +65,13 @@
 ;; {{description}}
 ;; * path-url : {{paths}}
 ;;
-(defun {{first-name}}-{{path-name}} (&key (base-url \"{{baseurl}}\") params content basic-authorization)
+(defun {{first-name}}-{{path-name}} (&key (base-url \"{{baseurl}}\") params content basic-authorization debug)
   (rest-call base-url \"{{path-url}}\" :params params :content content
                             :basic-authorization basic-authorization
                             :method {{method}}
                             :accept \"{{accept}}\"
-                            :content-type \"{{accept-type}}\"))")
+                            :content-type \"{{accept-type}}\"
+                            :debug debug))")
 
 (define rest-call-template-v2
   "
@@ -65,12 +79,13 @@
 ;; {{description}}
 ;; * path-url : {{paths}}
 ;;
-(defun {{first-name}}-{{path-name}} (path-url &key (base-url \"{{baseurl}}\") params content basic-authorization)
+(defun {{first-name}}-{{path-name}} (path-url &key (base-url \"{{baseurl}}\") params content basic-authorization debug)
   (rest-call base-url path-url :params params :content content
                                               :basic-authorization basic-authorization
                                               :method {{method}}
                                               :accept \"{{accept}}\"
-                                              :content-type \"{{accept-type}}\"))")
+                                              :content-type \"{{accept-type}}\"
+                                              :debug debug))")
 
 
 (define convert-json-template

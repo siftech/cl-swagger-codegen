@@ -1,7 +1,7 @@
 (in-package "CL-SWAGGER")
 
 ;;; drakma:*header-stream* for DEBUG
-(setf drakma:*header-stream* *standard-output*)
+
 
 (defun fetch-json (this-url)
   "gets JSON with this URL only when response-code is 200"
@@ -67,14 +67,28 @@
                   &key params content basic-authorization
                     (method :get)
                     (accept "application/json")
-                    (content-type "application/json"))
-  "call http-request with basic params and conteent and authorization"
-  (multiple-value-bind (stream code)
-      (drakma:http-request (format nil "~a~a" host url-path) :parameters params :content content :basic-authorization basic-authorization :accept accept :content-type content-type :want-stream t :method method)
-    (if (and (>= code 200) (< code 300))
-        (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
-               (cl-json:decode-json stream))
-        (error "REST ~a call failed with code ~a" method code))))
+                    (content-type "application/json")
+                    (debug t))
+  "call http-request with basic params and content and authorization"
+  (flet ((make-request ()
+           (drakma:http-request (format nil "~a~a" host url-path)
+                           :parameters params
+                           :content content
+                           :basic-authorization basic-authorization
+                           :accept accept
+                           :content-type content-type
+                           :want-stream t
+                           :method method)))
+    (multiple-value-bind (stream code)
+        (if debug
+            (let ((drakma:*header-stream* *standard-output*))
+              (make-request))
+            (make-request))
+        
+        (if (and (>= code 200) (< code 300))
+            (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
+                   (cl-json:decode-json stream))
+            (error "REST ~a call failed with code ~a" method code)))))
 
 (defparameter +http-methods+
   (list :|get| :|post| :|delete| :|patch|))
