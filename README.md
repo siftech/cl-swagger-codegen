@@ -35,6 +35,14 @@ This forked version of `cl-swagger-codegen` *cannot* be installed using Quicklis
 
 ## How to generate client Code with cl-swagger ##
 
+The API function for cl-swagger is `generate-client`:
+
+    (generate-client json-source output-file-designator &key (package-name :cl-swagger))
+
+The `json-source` may be either a *pathname* (**not** a namestring!) or a URL.  The stub will be written to the location specified by `output-file-designator`.  By default, the resulting code will be in the `:cl-swagger` package, but you may specify your own package in the call to `generate-client`.
+
+Note that whatever package that code lives in, it *must* `:use` the `cl-swagger.utils` package.
+
 
 ### Generating client lisp code from swagger url ###
 
@@ -83,6 +91,7 @@ Assuming you have a Swagger file, for example, `swagger.json`, you can generate 
 ```
 
 Note that the first argument *must be a Common Lisp pathname* and *not* a namestring.  This should probably be fixed.
+
 
 ## How to use the client code created by cl-swagger ##
 

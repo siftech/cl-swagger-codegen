@@ -51,36 +51,6 @@
   "scheme + hostname + basepath"
   (concatenate 'string (get-schemes json) "://" (get-host json) (get-basepath json)))
 
-
-
-(defun rest-call (host url-path
-                  &key params content basic-authorization
-                    (method :get)
-                    (accept "application/json")
-                    (content-type "application/json")
-                    (debug t))
-  "call http-request with basic params and content and authorization"
-  (let ((request-url (format nil "~a~a" host url-path)))
-    (flet ((make-request ()
-             (drakma:http-request request-url
-                                  :parameters params
-                                  :content content
-                                  :basic-authorization basic-authorization
-                                  :accept accept
-                                  :content-type content-type
-                                  :want-stream t
-                                  :method method)))
-      (multiple-value-bind (stream code)
-          (if debug
-              (let ((drakma:*header-stream* *standard-output*))
-                (make-request))
-              (make-request))
-        
-        (if (typep code 'success-response)
-            (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
-                   (decode-json stream))
-            (error "REST ~a call to ~a failed with code ~a" method request-url code))))))
-
 (defparameter +http-methods+
   (list :|get| :|post| :|delete| :|patch|))
 
@@ -94,8 +64,7 @@ and write it to FILEPATH."
   (with-open-file (*standard-output* filepath :direction :output :if-exists :supersede)
     ;; (format t "(ql:quickload \"drakma\")~%(ql:quickload \"cl-json\")~%")
     (format t "(in-package :~a)~%~%" (string-downcase package-name))
-    ;; emit the REST-CALL function into the output file
-    (rest-call-function)
+
     (loop :for paths :in (get-in '(:|paths|) json)
           do (loop :for path :in (rest paths)
                    :do ;;(format t "~%~A==>~A~%" (first paths) (first path))
@@ -115,8 +84,7 @@ and write it to FILEPATH."
                                         (:accept-type . ,accept-type))))
                             (if options
                                 (rest-call-template-v2 tmp)
-                                (rest-call-template-v1 tmp)))))))
-    (convert-json-template)))
+                                (rest-call-template-v1 tmp)))))))))
 
 #+ignore
 (defun parse-responses (json-list)

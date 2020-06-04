@@ -18,6 +18,7 @@
                 (cl-json:decode-json stream))
         (format t \"failed - code : ~a\" code))))")
 
+#|
 (define stream-to-string-function
 "
 (defun stream-to-string (stream)
@@ -26,8 +27,8 @@
           :while new
           :do (print new out))))
 ")
-
-
+|#
+#|
 (define rest-call-function
   "
 (defun rest-call (host url-path
@@ -57,6 +58,7 @@
         (let ((response-body (stream-to-string stream)))
             (error \"Unsuccessful HTTP ~a.  Code: ~a.~%Response header:~%~a~%Response body: ~a\"
                  method code header response-body))))))")
+|#
 
 
 (define rest-call-template-v1
@@ -87,7 +89,7 @@
                                               :content-type \"{{accept-type}}\"
                                               :debug debug))")
 
-
+#|
 (define convert-json-template
   "
 (defun 2xx-p (num)
@@ -107,3 +109,4 @@
                (let  ((cl-json:*json-identifier-name-to-lisp* (lambda (x) x)))
                  (cl-json:decode-json stream)))
         (error \"CONVERT-JSON failed with code ~a\" code))))")
+|#

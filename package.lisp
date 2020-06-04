@@ -1,10 +1,10 @@
-;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; Package: cl-swagger -*-
+;;;; -*- Mode: LISP; Base: 10; Syntax: ANSI-Common-lisp; -*-
+
+(in-package :common-lisp-user)
 
 (defpackage :cl-swagger
   (:use #:cl
-        ;; #:drakma
-        ;; #:cl-json
-        #:cl-ppcre
-        #:mustache
+        #:cl-swagger.utils
         #:iterate)
+  (:import-from #:mustache #:define)
   (:export #:generate-client))
