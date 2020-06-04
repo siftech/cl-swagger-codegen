@@ -90,13 +90,19 @@
 
 (define convert-json-template
   "
+(defun 2xx-p (num)
+  (and (>= 200 response-code) (<= response-code 300)))
+
+(deftype success-response ()
+  '(and integerp (satisifes 2xx-p)))
+
 ;;
 ;; (convert-json #'function \"/path\" content-json)
 ;;
 (defun convert-json (query-fun path body)
   (multiple-value-bind (code stream head)
       (funcall query-fun path body)
-    (if (and (>= code 200) (< code 300))
+    (if (typep code 'success-response)
         (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
                (let  ((cl-json:*json-identifier-name-to-lisp* (lambda (x) x)))
                  (cl-json:decode-json stream)))

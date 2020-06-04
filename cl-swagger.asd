@@ -9,5 +9,6 @@
   :serial t
   :depends-on ("drakma" "cl-json" "cl-ppcre" "cl-mustache" "iterate")
   :components ((:file "package")
+               (:file "json-utils")
                (:file "templates")
                (:file "code-gen")))

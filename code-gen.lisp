@@ -2,16 +2,6 @@
 
 ;;; drakma:*header-stream* for DEBUG
 
-
-(defun fetch-json (this-url)
-  "gets JSON with this URL only when response-code is 200"
-  (let ((cl-json:*json-identifier-name-to-lisp* (lambda (x) x)))
-    (multiple-value-bind (body response-code)
-        (http-request this-url :want-stream t)
-      (setf (flex:flexi-stream-external-format body) :utf-8)
-      (ecase response-code
-        (200 (cl-json:decode-json body))))))
-
 ;;; RE Pattern 
 (defparameter *parameter-pattern* "{([a-zA-Z\-]+)}")
 
@@ -70,25 +60,26 @@
                     (content-type "application/json")
                     (debug t))
   "call http-request with basic params and content and authorization"
-  (flet ((make-request ()
-           (drakma:http-request (format nil "~a~a" host url-path)
-                           :parameters params
-                           :content content
-                           :basic-authorization basic-authorization
-                           :accept accept
-                           :content-type content-type
-                           :want-stream t
-                           :method method)))
-    (multiple-value-bind (stream code)
-        (if debug
-            (let ((drakma:*header-stream* *standard-output*))
+  (let ((request-url (format nil "~a~a" host url-path)))
+    (flet ((make-request ()
+             (drakma:http-request request-url
+                                  :parameters params
+                                  :content content
+                                  :basic-authorization basic-authorization
+                                  :accept accept
+                                  :content-type content-type
+                                  :want-stream t
+                                  :method method)))
+      (multiple-value-bind (stream code)
+          (if debug
+              (let ((drakma:*header-stream* *standard-output*))
+                (make-request))
               (make-request))
-            (make-request))
         
-        (if (and (>= code 200) (< code 300))
+        (if (typep code 'success-response)
             (progn (setf (flexi-streams:flexi-stream-external-format stream) :utf-8)
-                   (cl-json:decode-json stream))
-            (error "REST ~a call failed with code ~a" method code)))))
+                   (decode-json stream))
+            (error "REST ~a call to ~a failed with code ~a" method request-url code))))))
 
 (defparameter +http-methods+
   (list :|get| :|post| :|delete| :|patch|))
@@ -102,7 +93,7 @@
 and write it to FILEPATH."
   (with-open-file (*standard-output* filepath :direction :output :if-exists :supersede)
     ;; (format t "(ql:quickload \"drakma\")~%(ql:quickload \"cl-json\")~%")
-    (format t "(in-package :~a)\n\n" (string-downcase package-name))
+    (format t "(in-package :~a)~%~%" (string-downcase package-name))
     ;; emit the REST-CALL function into the output file
     (rest-call-function)
     (loop :for paths :in (get-in '(:|paths|) json)
@@ -141,14 +132,17 @@ and write it to FILEPATH."
 
 
 (defun generate-client (url-or-pathname filepath
-                        &key (accept "application/json") (accept-type "application/json"))
+                        &key (accept "application/json") (accept-type "application/json")
+                          (package-name 'cl-swagger))
   "Client code generation function.  Takes either a URL or a CL:PATHNAME as argument,
 and writes a swagger client to FILEPATH.
    The optional arguments are, at the moment, ignored."
-  (let ((json (if (typep url-or-pathname 'pathname)
-                  (cl-json:decode-json-from-source url-or-pathname)
-                  (fetch-json url-or-pathname))))
-    (generate-client-with-json json
-                               filepath :accept accept :accept-type accept-type)))
+  (let ((json
+          (if (typep url-or-pathname 'pathname)
+              (decode-json-from-source url-or-pathname)
+              (fetch-json url-or-pathname))))
+    (generate-client-with-json json filepath
+                               :package-name package-name
+                               :accept accept :accept-type accept-type)))
 
 ;;(with-output-to-string (st) (run-program "curl" '("-ks" "-u" "mapr:mapr" "https://172.16.28.138:8443/rest/alarm/list") :output st))
