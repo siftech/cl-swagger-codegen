@@ -67,8 +67,8 @@
 ;; {{description}}
 ;; * path-url : {{paths}}
 ;;
-(defun {{first-name}}-{{path-name}} (&key (base-url \"{{baseurl}}\") params content basic-authorization debug)
-  (rest-call base-url \"{{path-url}}\" :params params :content content
+(defun {{first-name}}-{{path-name}} (host &key (base-url \"{{baseurl}}\") params content basic-authorization debug)
+  (rest-call host base-url \"{{path-url}}\" :params params :content content
                             :basic-authorization basic-authorization
                             :method {{method}}
                             :accept \"{{accept}}\"
@@ -81,8 +81,8 @@
 ;; {{description}}
 ;; * path-url : {{paths}}
 ;;
-(defun {{first-name}}-{{path-name}} (path-url &key (base-url \"{{baseurl}}\") params content basic-authorization debug)
-  (rest-call base-url path-url :params params :content content
+(defun {{first-name}}-{{path-name}} (host path-url &key (base-url \"{{baseurl}}\") params content basic-authorization debug)
+  (rest-call host base-url path-url :params params :content content
                                               :basic-authorization basic-authorization
                                               :method {{method}}
                                               :accept \"{{accept}}\"
