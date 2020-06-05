@@ -3,23 +3,24 @@
 ;;; drakma:*header-stream* for DEBUG
 
 ;;; RE Pattern 
-(defparameter *parameter-pattern* "{([a-zA-Z\-]+)}")
+(defparameter *parameter-pattern* "{.*}")
+
+(defun split-path (path-desig)
+  "Return a list of strings for the slash-separated path components."
+  (remove ""
+          (cl-ppcre:split "/" (string path-desig))
+          :test 'equalp))
 
 (defun parse-path-parameters (path)
   "returns two values, 1st is non param path element, 2nd are the params.
    ex) /PARAM1/{PARAM2} ==> ((\"PARAM1\") (\"PARAM2\"))"
-  (values-list (mapcar #'nreverse
-                       (reduce
-                        (lambda (acc v)
-                          (if (string= "" v)
-                              acc
-                              (let ((param (cl-ppcre:register-groups-bind (param)
-                                               (*parameter-pattern* v) param)))
-                                (if param
-                                    (list (first acc) (push param (second acc)))
-                                    (list (push v (first acc)) (second acc))))))
-                        (cl-ppcre:split "/" (string path))
-                        :initial-value (list nil nil)))))
+  (iter (for path-component in (split-path path))
+    (as param = (cl-ppcre:register-groups-bind (param)
+                    (*parameter-pattern* param) param))
+    (if param
+        (collecting param into param-list)
+        (collect path-component into path-list))
+    (finally (return (values path-list param-list)))))
 
 (defun normalize-path-name (name)
   "string --> A-B-C"
