@@ -120,11 +120,25 @@
          . "The POST endpoint to call to be notified of changes to microservices matching the query parameter constraints."))))))))))
 
 (test test-path-parsing
+  ()
   (is (equalp '("microservices" "watch" "{watch_id}")
               (split-path (first +path-with+))))
   (is (equalp '("microservices" "watch")
               (split-path (first +path-without+))))
+  (is-true  (cl-swagger::match-param "{service_id}"))
+  (is (equalp '("microservices" "{service_id}") (cl-swagger::split-path ':|/microservices/{service_id}|)))
+  (is (equalp `(("microservices") ("{service_id}"))
+              (multiple-value-list (parse-path-parameters ':|/microservices/{service_id}|))))
   (is (equalp (list '("microservices" "watch") nil)
               (multiple-value-list (parse-path-parameters (first +path-without+)))))
-  (is (equalp (list '("microservices" "watch" "{watch_id}") nil)
+  (is (equalp '(("microservices" "watch") ("{watch_id}"))
               (multiple-value-list (parse-path-parameters (first +path-with+))))))
+
+(test test-path-translation
+  (multiple-value-bind (fnames options)
+      (parse-path-parameters (first +path-without+))
+    (is-false options)
+    (is (equalp '("microservices" "watch") fnames))
+    
+    )
+  )
